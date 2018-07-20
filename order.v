@@ -1674,10 +1674,10 @@ Lemma le_eqVlt x y: (x <= y) = (x == y) || (x < y).
 Proof. by rewrite lt_neqAle; case: eqP => //= ->; rewrite lexx. Qed.
 
 Lemma lt_eqF x y: x < y -> x == y = false.
-Proof. by rewrite lt_neqAle => /andP [/negbTE->]. Qed.
+Proof. by rewrite lt_neqAle; case: eqP. Qed.
 
 Lemma gt_eqF x y : y < x -> x == y = false.
-Proof. by apply: contraTF => /eqP ->; rewrite ltxx. Qed.
+Proof. by rewrite eq_sym => /lt_eqF. Qed.
 
 Lemma eq_le x y: (x == y) = (x <= y <= x).
 Proof. by apply/eqP/idP => [->|/le_anti]; rewrite ?lexx. Qed.
@@ -1719,7 +1719,7 @@ by rewrite lt_neqAle lexy andbT; apply: contraNneq Nleyx => ->.
 Qed.
 
 Lemma lt_le_asym x y : x < y <= x = false.
-Proof. by rewrite lt_neqAle -andbA -eq_le eq_sym; case: (_ == _). Qed.
+Proof. by rewrite lt_neqAle -andbA -eq_le andNb. Qed.
 
 Lemma le_lt_asym x y : x <= y < x = false.
 Proof. by rewrite andbC lt_le_asym. Qed.
@@ -1744,14 +1744,14 @@ Proof. by apply: eq_sorted; [apply: le_trans|apply: le_anti]. Qed.
 
 Lemma comparable_leNgt x y : x >=< y -> (x <= y) = ~~ (y < x).
 Proof.
-move=> c_xy; apply/idP/idP => [/le_gtF/negP/negP//|]; rewrite lt_neqAle.
-by move: c_xy => /orP [] -> //; rewrite andbT negbK => /eqP ->.
+move=> c_xy; apply/idP/idP => [/le_gtF->//|]; rewrite lt_neqAle.
+by case/orP: c_xy => -> //; rewrite andbT negbK => /eqP ->.
 Qed.
 
 Lemma comparable_ltNge x y : x >=< y -> (x < y) = ~~ (y <= x).
 Proof.
-move=> c_xy; apply/idP/idP => [/lt_geF/negP/negP//|].
-by rewrite lt_neqAle eq_le; move: c_xy => /orP [] -> //; rewrite andbT.
+move=> c_xy; apply/idP/idP => [/lt_geF->//|].
+by rewrite lt_neqAle eq_le; case/orP: c_xy => -> //; rewrite andbT.
 Qed.
 
 Lemma comparable_ltgtP x y : x >=< y ->
@@ -1759,7 +1759,7 @@ Lemma comparable_ltgtP x y : x >=< y ->
 Proof.
 rewrite />=<%O !le_eqVlt [y == x]eq_sym.
 have := (altP (x =P y), (boolP (x < y), boolP (y < x))).
-move=> [[->//|neq_xy /=] [[] xy [] //=]] ; do ?by rewrite ?ltxx; constructor.
+move=> [[->|neq_xy /=] [[] xy [] //=]] ; do ?by rewrite ?ltxx; constructor.
   by rewrite ltxx in xy.
 by rewrite le_gtF // ltW.
 Qed.
@@ -1814,8 +1814,8 @@ Proof. by case: comparableP. Qed.
 Lemma leifP x y C : reflect (x <= y ?= iff C) (if C then x == y else x < y).
 Proof.
 rewrite /leif le_eqVlt; apply: (iffP idP)=> [|[]].
-  by case: C => [/eqP->|lxy]; rewrite ?eqxx // lxy lt_eqF.
-by move=> /orP[/eqP->|lxy] <-; rewrite ?eqxx // lt_eqF.
+  by case: C => [->//|lxy]; rewrite lxy lt_eqF.
+by case/orP => [->|lxy] <- //; rewrite lt_eqF.
 Qed.
 
 End POrderTheory.
@@ -1837,7 +1837,7 @@ Definition reverse_le (x y : T) := (y <= x).
 Definition reverse_lt (x y : T) := (y < x).
 
 Lemma reverse_lt_neqAle (x y : T) : reverse_lt x y = (x != y) && (reverse_le x y).
-Proof. by rewrite eq_sym; apply: lt_neqAle. Qed.
+Proof. by rewrite eq_sym -lt_neqAle. Qed.
 
 Fact reverse_le_anti : antisymmetric reverse_le.
 Proof. by move=> x y /andP [xy yx]; apply/le_anti/andP; split. Qed.
@@ -1916,11 +1916,11 @@ Implicit Types (x y : L).
 
 (* lattice theory *)
 Lemma meetAC : right_commutative (@meet _ L).
-Proof. by move=> x y z; rewrite -!meetA [X in _ `&` X]meetC. Qed.
+Proof. by move=> x y z; rewrite -!meetA (meetC y). Qed.
 Lemma meetCA : left_commutative (@meet _ L).
-Proof. by move=> x y z; rewrite !meetA [X in X `&` _]meetC. Qed.
+Proof. by move=> x y z; rewrite !meetA (meetC y). Qed.
 Lemma meetACA : interchange (@meet _ L) (@meet _ L).
-Proof. by move=> x y z t; rewrite !meetA [X in X `&` _]meetAC. Qed.
+Proof. by move=> x y z t; rewrite !meetA (meetAC x). Qed.
 
 Lemma meetxx x : x `&` x = x.
 Proof. by rewrite -[X in _ `&` X](meetKU x) joinKI. Qed.
@@ -1948,9 +1948,9 @@ Proof. by rewrite !leEmeet meetKIC. Qed.
 
 Lemma lexI x y z : (x <= y `&` z) = (x <= y) && (x <= z).
 Proof.
-rewrite !leEmeet; apply/idP/idP => [/eqP<-|/andP[/eqP<- /eqP<-]].
-  by rewrite meetA meetIK eqxx -meetA meetACA meetxx meetAC eqxx.
-by rewrite -[X in X `&` _]meetA meetIK meetA.
+rewrite !leEmeet; apply/eqP/andP => [<-|[/eqP<- /eqP<-]].
+  by rewrite -!meetA meetKIC meetxx.
+by rewrite meetACA meetxx meetIK.
 Qed.
 
 Lemma leIx x y z : (y <= x) || (z <= x) -> y `&` z <= x.
@@ -1964,10 +1964,10 @@ Lemma leIr x y : y `&` x <= x.
 Proof. by rewrite leIx ?lexx ?orbT. Qed.
 
 Lemma leIl x y : x `&` y <= x.
-Proof. by rewrite leIx ?lexx ?orbT. Qed.
+Proof. by rewrite meetC leIr. Qed.
 
 Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
-Proof. by move=> xz yt; rewrite lexI !leIx ?xz ?yt ?orbT //. Qed.
+Proof. by move=> xz yt; rewrite lexI !leIx ?xz ?yt ?orbT. Qed.
 
 End LatticeTheoryMeet.
 End LatticeTheoryMeet.
@@ -2152,11 +2152,11 @@ Local Notation "0" := bottom.
 Lemma le0x x : 0 <= x. Proof. by case: L x => [?[?[]]]. Qed.
 Hint Resolve le0x.
 
-Lemma lex0 x : (x <= 0) = (x == 0).
-Proof. by rewrite le_eqVlt (le_gtF (le0x _)) orbF. Qed.
-
 Lemma ltx0 x : (x < 0) = false.
-Proof. by rewrite lt_neqAle lex0 andNb. Qed.
+Proof. rewrite le_gtF // lex0. Qed.
+
+Lemma lex0 x : (x <= 0) = (x == 0).
+Proof. by rewrite le_eqVlt ltx0 orbF. Qed.
 
 Lemma lt0x x : (0 < x) = (x != 0).
 Proof. by rewrite lt_neqAle le0x andbT eq_sym. Qed.
@@ -2182,26 +2182,17 @@ Lemma leU2r_le y t x z : x `&` t = 0 -> y `|` x <= t `|` z -> x <= z.
 Proof. by rewrite joinC [_ `|` z]joinC => /leU2l_le H /H. Qed.
 
 Lemma lexUl z x y : x `&` z = 0 -> (x <= y `|` z) = (x <= y).
-Proof.
-move=> xz0; apply/idP/idP=> xy; last by rewrite lexU ?xy.
-by apply: (@leU2l_le x z); rewrite ?joinxx.
-Qed.
+Proof. by move=> xz0; rewrite !leEmeet meetUr xz0 joinx0. Qed.
 
 Lemma lexUr z x y : x `&` z = 0 -> (x <= z `|` y) = (x <= y).
-Proof. by move=> xz0; rewrite joinC; rewrite lexUl. Qed.
+Proof. by move=> xz0; rewrite joinC lexUl. Qed.
 
 Lemma leU2E x y z t : x `&` t = 0 -> y `&` z = 0 ->
   (x `|` y <= z `|` t) = (x <= z) && (y <= t).
-Proof.
-move=> dxt dyz; apply/idP/andP; last by case=> ??; exact: leU2.
-by move=> lexyzt; rewrite (leU2l_le _ lexyzt) // (leU2r_le _ lexyzt).
-Qed.
+Proof. by move=> dxt dyz; rewrite leUx lexUl // lexUr. Qed.
 
 Lemma join_eq0 x y : (x `|` y == 0) = (x == 0) && (y == 0).
-Proof.
-apply/idP/idP; last by move=> /andP [/eqP-> /eqP->]; rewrite joinx0.
-by move=> /eqP xUy0; rewrite -!lex0 -!xUy0 ?leUl ?leUr.
-Qed.
+Proof. by rewrite -!lex0 leUx. Qed.
 
 CoInductive eq0_xor_gt0 x : bool -> bool -> Set :=
     Eq0NotPOs : x = 0 -> eq0_xor_gt0 x true false
@@ -2215,7 +2206,7 @@ Canonical join_comoid := Monoid.ComLaw (@joinC _ _).
 
 Lemma join_sup (I : finType) (j : I) (P : pred I) (F : I -> L) :
    P j -> F j <= \join_(i | P i) F i.
-Proof. by move=> Pj; rewrite (bigD1 j) //= lexU ?lexx. Qed.
+Proof. by move=> Pj; rewrite (bigD1 j) //= leUl. Qed.
 
 Lemma join_min (I : finType) (j : I) (l : L) (P : pred I) (F : I -> L) :
    P j -> l <= F j -> l <= \join_(i | P i) F i.
@@ -2494,10 +2485,10 @@ Lemma subUK y x : (x `\` y) `|` y = x `|` y.
 Proof. by rewrite joinC subKU joinC. Qed.
 
 Lemma leBKU y x : y <= x -> y `|` (x `\` y) = x.
-Proof. by move=> /join_idPl {2}<-; rewrite subKU. Qed.
+Proof. by rewrite subKU => /join_idPl. Qed.
 
 Lemma leBUK y x : y <= x -> (x `\` y) `|` y = x.
-Proof. by move=> leyx; rewrite joinC leBKU. Qed.
+Proof. rewrite joinC; apply: leBKU. Qed.
 
 Lemma leBLR x y z : (x `\` y <= z) = (x <= y `|` z).
 Proof.
