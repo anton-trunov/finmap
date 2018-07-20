@@ -2496,9 +2496,9 @@ apply/idP/idP; first by move=> /join_idPl <-; rewrite joinA subKU joinAC leUr.
 by rewrite -{1}[x](joinIB y) => /(leU2r_le (subIK _ _)).
 Qed.
 
-Lemma subUx x y z : (x `|` y) `\` z = (x `\` z) `|` (y `\` z).
+Lemma subUl : left_distributive (@sub _ L) (@join _ L).
 Proof.
-apply/eqP; rewrite eq_le leUx !leBl ?leUr ?leUl ?andbT //.
+move=> x y z; apply/eqP; rewrite eq_le leUx !leBl ?leUr ?leUl ?andbT //.
 by rewrite leBLR joinA subKU joinAC subKU joinAC -joinA leUr.
 Qed.
 
@@ -2506,7 +2506,7 @@ Lemma sub_eq0 x y : (x `\` y == 0) = (x <= y).
 Proof. by rewrite -lex0 leBLR joinx0. Qed.
 
 Lemma joinxB x y z : x `|` (y `\` z) = ((x `|` y) `\` z) `|` (x `&` z).
-Proof. by rewrite subUx joinAC joinBI. Qed.
+Proof. by rewrite subUl joinAC joinBI. Qed.
 
 Lemma joinBx x y z : (y `\` z) `|` x = ((y `|` x) `\` z) `|` (z `&` x).
 Proof. by rewrite ![_ `|` x]joinC ![_ `&` x]meetC joinxB. Qed.
@@ -2581,10 +2581,10 @@ by rewrite meetA meetAC subIK meet0x joinx0 (meet_idPr _).
 Qed.
 
 Lemma joinBK x y : (y `|` x) `\` x = (y `\` x).
-Proof. by rewrite subUx subxx joinx0. Qed.
+Proof. by rewrite subUl subxx joinx0. Qed.
 
 Lemma joinBKC x y : (x `|` y) `\` x = (y `\` x).
-Proof. by rewrite subUx subxx join0x. Qed.
+Proof. by rewrite subUl subxx join0x. Qed.
 
 Lemma disj_le x y : x `&` y == 0 -> x <= y = (x == 0).
 Proof.

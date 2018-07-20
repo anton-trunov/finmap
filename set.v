@@ -697,7 +697,7 @@ Lemma setID A B : A :&: B :|: A :\: B = A.
 Proof. exact: joinIB. Qed.
 
 Lemma setDUl A B C : (A :|: B) :\: C = (A :\: C) :|: (B :\: C).
-Proof. exact: subUx. Qed.
+Proof. exact: subUl. Qed.
 
 Lemma setDUr A B C : A :\: (B :|: C) = (A :\: B) :&: (A :\: C).
 Proof. exact: subxU. Qed.
