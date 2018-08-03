@@ -2926,20 +2926,49 @@ Definition fsinjectiveb : pred {fsfun x : K => x} :=
   [pred f | (injectiveb [ffun a : finsupp f => f (val a)])
             && [forall a : finsupp f, f (val a) \in finsupp f]].
 
-Let equivalent (Ps : seq Prop) :=
-  if Ps is P0 :: Ps then
-  let fix aux (P : Prop) (Qs : seq Prop) :=
-      if Qs is Q :: Qs then (P -> Q) /\ (aux Q  Qs) else P -> P0
-  in aux P0 Ps else True.
+Inductive all_iff_and (P Q : Prop) := AllIffConj of P & Q.
+Definition all_iff P0 (Ps : seq Prop) : Prop :=
+  (fix aux (P : Prop) (Qs : seq Prop) : Prop :=
+      if Qs is Q :: Qs then all_iff_and (P -> Q) (aux Q Qs)
+      else P -> P0 : Prop) P0 Ps.
 
-Lemma fsinjective_subproof f :
-  equivalent [:: injective f
-              ; let S := finsupp f in
-                {in S &, injective f} /\ forall a : S, f (val a) \in S
-              ; exists2 S : {fset K}, (finsupp f `<=` S)
-                & {in S &, injective f} /\ forall a : S, f (val a) \in S].
+Notation "[ '<->' x0 ; x1 ; .. ; xn ]" := (all_iff x0 (x1 :: .. [:: xn] ..))
+  (at level 0, format "[ '<->' '['  x0 ;  '/' x1 ;  '/'  .. ;  '/'  xn ']' ]")
+  : form_scope.
+
+Lemma all_iffLR P0 Ps : all_iff P0 Ps ->
+   forall m n, nth P0 (P0 :: Ps) m -> nth P0 (P0 :: Ps) n.
 Proof.
-split => /= [f_inj|]; last split=> [[f_inj f_st]|[S fS [f_inj f_st]] a b].
+move=> Ps_iff; have ltn_imply : {homo nth P0 Ps : m n / m < n >-> (m -> n)}.
+  apply: homo_ltn => [|i]; first tauto.
+  elim: Ps i P0 Ps_iff => [|P [|/=Q Ps] IHPs] [|i]//= P0 [P0P Ps_iff]//=;
+     do ?by [rewrite nth_nil|case: Ps_iff].
+  by case: Ps_iff => [PQ Ps_iff]; apply: IHPs; split => // /P0P.
+have {ltn_imply}leq_imply : {homo nth P0 Ps : m n / m <= n >-> (m -> n)}.
+  by move=> m n; rewrite leq_eqVlt => /predU1P[->//|/ltn_imply].
+move=> [:P0ton Pnto0] [|m] [|n]//=.
+- abstract: P0ton n.
+  suff P0to0 : P0 -> nth P0 Ps 0 by move=> /P0to0; apply: leq_imply.
+  by case: Ps Ps_iff {leq_imply} => // P Ps [].
+- abstract: Pnto0 m; move=> /(leq_imply m (maxn (size Ps) m)).
+  by rewrite leq_max leqnn orbT nth_default ?leq_max ?leqnn //; apply.
+exact: (P0ton _ \o Pnto0 _).
+Qed.
+Arguments all_iffLR {P0 Ps}.
+
+Lemma all_iffP P0 Ps : all_iff P0 Ps ->
+   forall m n, nth P0 (P0 :: Ps) m <-> nth P0 (P0 :: Ps) n.
+Proof. by move=> /all_iffLR iffPs m n; split => /iffPs. Qed.
+Coercion all_iffP : all_iff >-> Funclass.
+
+Lemma fsinjP f : [<->
+  (*0*) injective f;
+  (*1*) let S := finsupp f in {in S &, injective f}
+        /\ forall a : S, f (val a) \in S;
+  (*2*) exists2 S : {fset K}, (finsupp f `<=` S) & {in S &, injective f}
+        /\ forall a : S, f (val a) \in S].
+Proof.
+do ?[apply: AllIffConj] => [f_inj|[f_inj f_st]|[S fS [f_inj f_st]] a b].
 - split=> [a b ? ?|a]; first exact: f_inj.
   rewrite mem_finsupp (inj_eq f_inj) -mem_finsupp; apply/valP.
 - by exists (finsupp f)=> //; apply: fsubset_refl.
@@ -2956,20 +2985,15 @@ Qed.
 
 Lemma fsinjectiveP f : reflect (injective f) (fsinjectiveb f).
 Proof.
-have [H1 [H2 H3]]:= fsinjective_subproof f.
-rewrite /fsinjectiveb; apply: (iffP idP)=> [|].
-  by move=> /andP [/fsfun_injective_inP ? /forallP ?]; apply/H3/H2.
-by move=> /H1 [/fsfun_injective_inP ? /forallP ?]; apply/andP.
+apply: equivP (fsinjP _ 1 0) => /=;
+by apply: (iffP andP)=> -[/fsfun_injective_inP ? /forallP ?].
 Qed.
 
 Lemma fsinjectivebP f :
   reflect (exists2 S : {fset K}, (finsupp f `<=` S)
            & {in S &, injective f} /\ forall a : S, f (val a) \in S)
         (fsinjectiveb f).
-Proof.
-have [H1 [H2 H3]]:= fsinjective_subproof f.
-by apply: (iffP (fsinjectiveP _)) => //; by move=> /H1 /H2.
-Qed.
+Proof. by apply/(iffP (fsinjectiveP _)) => /(fsinjP _ 0 2). Qed.
 
 End FsfunIdTheory.
 
