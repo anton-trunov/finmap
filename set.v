@@ -148,7 +148,7 @@ Local Coercion sort : type >-> Funclass.
 
 Variables (set : elementType -> Type) (disp : unit) (cT : type disp).
 
-Definition class := let: Pack _ c _ as cT' := cT return class_of _ cT' in c.
+Definition class := let: Pack _ c as cT' := cT return class_of _ cT' in c.
 Definition clone disp' c of (disp = disp') & phant_id class c :=
   @Pack disp' set c set.
 Let xset := let: Pack set _ _ := cT in set.
@@ -921,7 +921,7 @@ Local Coercion sort : type >-> Funclass.
 
 Variables (set : elementType -> Type) (disp : unit) (cT : type disp).
 
-Definition class := let: Pack _ c _ as cT' := cT return class_of _ cT' in c.
+Definition class := let: Pack _ c as cT' := cT return class_of _ cT' in c.
 (* Definition clone c of phant_id class c := @Pack set c set. *)
 Let xset := let: Pack set _ _ := cT in set.
 Notation xclass := (class : class_of xset).
